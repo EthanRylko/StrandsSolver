@@ -1,6 +1,11 @@
 from typing import *
 from selenium.webdriver.remote.webelement import WebElement
 from tree import *
+import nltk
+from nltk.corpus import words
+
+nltk.download('words')
+word_set = set(words.words())
 
 def solve(board: List[List[WebElement]]):
     """
@@ -11,10 +16,6 @@ def solve(board: List[List[WebElement]]):
     """
     solved = False
     word_length = 4
-
-    check_all_words(board, 0, 0, word_length)
-
-    while True: pass
 
     while not solved:
         for y, row in enumerate(board):
@@ -45,11 +46,12 @@ def check_all_words(board: List[List[WebElement]], x: int, y: int, word_length: 
 
     # get surroundings (check if edge or already in other word)
     add_surroundings(node, x, y, board, 1, word_length)
-    print('finished 0, 0 search')
-    traverse(node)
+    print(f'finished {x}, {y} search')
 
     # repeat until word_length reached
     # traverse tree, clicking on buttons
+    # TODO: Click on buttons
+    traverse(node)
     # at each attempt, check the word count to see if there is a success. If so, update the grid to eliminate some letters
 
 
@@ -133,7 +135,10 @@ def traverse(node: Node, path: str = ''):
     path += node.data.text
 
     if node.children is None:
-        print(path)
+        if path.lower() in word_set:
+            # Found a real word
+            print(path)
+            #click_on_path(path)
     else:
         for child in node.children:
             traverse(child, path)

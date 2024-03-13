@@ -8,6 +8,7 @@ class Node:
         any data: Data held by the node
         Node parent: Parent node
         List children: List of child nodes
+        bool visited: Has this been visited?
     """
     def __init__(self, data: any):
         """
@@ -19,6 +20,7 @@ class Node:
         self.data = data
         self.parent = None
         self.children = None
+        self.visited = False
 
 
     def add_child(self, data: any):
@@ -35,6 +37,16 @@ class Node:
         else:
             self.children.append(node)
         return node
+    
+    
+    def set_visited(self, val: bool):
+        """
+        Mark node as visited
+
+        Args:
+            bool visited: New value
+        """
+        self.visited = val
 
 
 class Tree:

@@ -1,3 +1,4 @@
+import explorer
 from typing import *
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -18,7 +19,6 @@ board_class = 'UOpmtW_board'
 # I hope these stay cosntant
 ROWS = 8
 COLS = 6
-
 
 
 def start():
@@ -61,8 +61,7 @@ def print_board(board: List[List[WebElement]]):
     Print the board in a human-readable format
 
     Args:
-        list(list(WebElement)) board:
-
+        List[List[WebElement]] board: Array of buttons
     """
     for row in board:
         for button in row:
@@ -75,7 +74,7 @@ def load_board() -> List[List[WebElement]]:
     Load the board into an array of buttons that can be clicked through later
 
     Returns:
-        list(list(WebElement)): Array of buttons
+        List[List[WebElement]]: Array of buttons
     """
     board = list()
     counter = 0
@@ -99,6 +98,4 @@ if __name__ == '__main__':
     start()
     total_words = find_total_words()
     board = load_board()
-
-    while (True):
-        pass
+    explorer.solve(board)

@@ -8,6 +8,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.remote.webelement import WebElement
+from selenium.common.exceptions import NoSuchElementException
+
 
 start_button_class = 'Feo8La_playButton'
 close_button_class = 'PwGt5a_closeX'
@@ -17,6 +19,12 @@ board_class = 'UOpmtW_board'
 # I hope these stay cosntant
 ROWS = 8
 COLS = 6
+
+class ButtonInfo():
+    def __init__(self, text, id):
+        self.text = text
+        self.id = id
+
 
 class Explorer():
 
@@ -64,8 +72,8 @@ class Explorer():
         Returns:
             int: Number of words to find in the puzzle
         """
-        hint_div = WebDriverWait(self.driver, 2).until(expected_conditions.presence_of_element_located((By.CLASS_NAME, hint_div_class)))
-        paragraph = hint_div.find_element(By.TAG_NAME, 'p')
+        self.hint_div = WebDriverWait(self.driver, 2).until(expected_conditions.presence_of_element_located((By.CLASS_NAME, hint_div_class)))
+        paragraph = self.hint_div.find_element(By.TAG_NAME, 'p')
         bold_tags = paragraph.find_elements(By.TAG_NAME, 'b')
 
         if bold_tags:
@@ -76,27 +84,30 @@ class Explorer():
         else:
             print('Bold Tags not found, how many words are there?')
             return 0
+        
 
-    def load_board(self) -> List[List[WebElement]]:
+    def load_board(self) -> List[List[ButtonInfo]]:
         """
         Load the board into an array of buttons that can be clicked through later
 
         Returns:
-            List[List[WebElement]]: Array of buttons
+            List[List[ButtonInfo]]: Array of buttons
         """
-        board = list()
+        board = [[None for _ in range(COLS)] for _ in range(ROWS)]
         counter = 0
 
-        board_div = WebDriverWait(self.driver, 2).until(expected_conditions.presence_of_element_located((By.CLASS_NAME, board_class)))
+        self.board_div = WebDriverWait(self.driver, 2).until(expected_conditions.presence_of_element_located((By.CLASS_NAME, board_class)))
         for y in range(ROWS):
-            row = list()
             for x in range(COLS):
-                button = board_div.find_element(By.ID, f'button-{counter}')
-                row.append(button)
+                try:
+                    button = self.board_div.find_element(By.ID, f'button-{counter}')
+                    button_id = button.get_property('id')
+                    button_info = ButtonInfo(button.text[0], button_id)
+                except NoSuchElementException:
+                    button_info = None
 
+                board[y][x] = button_info
                 counter += 1
-
-            board.append(row)
         
         return board
 
@@ -113,6 +124,7 @@ class Explorer():
             for y, row in enumerate(self.board):
                 for x, button in enumerate(row):
                     self.check_all_words(x, y, word_length)
+                    self.board = self.load_board()
 
             # all words of length word_length found, go up one
             word_length += 1
@@ -137,7 +149,8 @@ class Explorer():
         # repeat until word_length reached
         # traverse tree, clicking on buttons
         # TODO: Click on buttons
-        self.traverse(root)
+        self.print_by_breadth(root, word_length)
+        self.traverse(root, list())
         # at each attempt, check the word count to see if there is a success. If so, update the grid to eliminate some letters
 
 
@@ -183,7 +196,7 @@ class Explorer():
         return x in range(0, 6) and y in range(0, 8)
 
 
-    def not_in_lineage(self, node: Node, data: WebElement) -> bool:
+    def not_in_lineage(self, node: Node, data: ButtonInfo) -> bool:
         """
         Recursively check if data is present in lineage of node
 
@@ -197,10 +210,10 @@ class Explorer():
         if node.parent is None:
             return True
         
-        search_id = data.get_attribute('id')
-        parent_id = node.parent.data.get_attribute('id')
+        # search_id = data.get_attribute('id')
+        # parent_id = node.parent.data.get_attribute('id')
         # print(f'compare {search_id} and {parent_id}')
-        if search_id == parent_id:
+        if data.id == node.parent.data.id:
             return False
 
         return self.not_in_lineage(node.parent, data)
@@ -220,29 +233,52 @@ class Explorer():
         path.append(node.data)
 
         if node.children is None:
-            #if path.lower() in self.word_set:
-            #    # Found a real word
+            word = str()
+            for item in path:
+                word += item.text
+            
+            if word.lower() in self.word_set:
+                # Found a real word
                 self.click_on_path(path)
+                print(f'tried {word}')
+            # pass
         else:
             for child in node.children:
-                self.traverse(child, path)
+                self.traverse(child, path[:])
                 
 
     def click_on_path(self, path):
         for item in path:
             # get id
-            #button_id = item.get_attribute('id')
             # need access to board div somehow...
-            #button = board_div.find_element(By.ID, button_id)
+            #print(f'Button {item.text} with id {item.id}')
+
+            button = self.board_div.find_element(By.ID, item.id)
 
             # click
-            #button.click()
-            pass
+            button.click()
+            self.board = self.load_board()
 
         # end of path, click again
-        #button.click()
+        button.click()
 
         # check word count, if increased then return true
         #return verify_word()
 
         # return false
+    
+    def print_by_breadth(self, root, depth):
+        nodes = [root]
+        children = list()
+        for i in range(depth):
+            for node in nodes:
+                print(node.data.text, end='')
+                if node.children is None:
+                    continue
+                for child in node.children:
+                    children.insert(0, child)
+
+            print('')
+            nodes = children
+            children = list()
+            

@@ -32,6 +32,7 @@ class Explorer():
         nltk.download('words')
         self.word_set = set(words.words())
         self.driver = webdriver.Chrome()
+        self.tried = set()
 
     def run(self):
         self.start()
@@ -148,8 +149,7 @@ class Explorer():
 
         # repeat until word_length reached
         # traverse tree, clicking on buttons
-        # TODO: Click on buttons
-        self.print_by_breadth(root, word_length)
+        #self.print_by_breadth(root, word_length)
         self.traverse(root, list())
         # at each attempt, check the word count to see if there is a success. If so, update the grid to eliminate some letters
 
@@ -237,10 +237,14 @@ class Explorer():
             for item in path:
                 word += item.text
             
-            if word.lower() in self.word_set:
+            #in_dictionary = word.lower() in self.word_set or word.lower() + 's' in self.word_set
+            in_dictionary = word in {'BUGS', 'FOGHORN', 'ROADRUNNER', 'LOONEYTUNES', 'PORKY', 'COYOTE', 'DAFFY'}
+
+            if word not in self.tried and in_dictionary:
                 # Found a real word
                 self.click_on_path(path)
                 print(f'tried {word}')
+                self.tried.add(word)
             # pass
         else:
             for child in node.children:

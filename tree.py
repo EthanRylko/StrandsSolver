@@ -38,7 +38,7 @@ class Node:
             self.children.append(node)
         return node
     
-    
+
     def set_visited(self, val: bool):
         """
         Mark node as visited
@@ -47,14 +47,3 @@ class Node:
             bool visited: New value
         """
         self.visited = val
-
-
-class Tree:
-    """
-    Class representing a n-ary tree
-
-    Attributes:
-        Node root: Root node
-    """
-    def __init__(self, data):
-        self.root = Node(data)

@@ -8,7 +8,6 @@ class Node:
         any data: Data held by the node
         Node parent: Parent node
         List children: List of child nodes
-        bool visited: Has this been visited?
     """
     def __init__(self, data: any):
         """
@@ -19,8 +18,7 @@ class Node:
         """
         self.data = data
         self.parent = None
-        self.children = None
-        self.visited = False
+        self.children = list()
 
 
     def add_child(self, data: any):
@@ -32,10 +30,7 @@ class Node:
         """
         node = Node(data)
         node.parent = self
-        if self.children is None:
-            self.children = [node]
-        else:
-            self.children.append(node)
+        self.children.append(node)
         return node
     
 

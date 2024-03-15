@@ -9,6 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import TimeoutException
 
 
 start_button_class = 'Feo8La_playButton'
@@ -237,8 +238,8 @@ class Explorer():
             for item in path:
                 word += item.text
             
-            #in_dictionary = word.lower() in self.word_set or word.lower() + 's' in self.word_set
-            in_dictionary = word in {'BUGS', 'FOGHORN', 'ROADRUNNER', 'LOONEYTUNES', 'PORKY', 'COYOTE', 'DAFFY'}
+            in_dictionary = word.lower() in self.word_set or word.lower() + 's' in self.word_set
+            #in_dictionary = word in {'BUGS', 'FOGHORN', 'ROADRUNNER', 'LOONEYTUNES', 'PORKY', 'COYOTE', 'DAFFY'}
 
             if word not in self.tried and in_dictionary:
                 # Found a real word
@@ -266,11 +267,24 @@ class Explorer():
         # end of path, click again
         button.click()
 
+        # TODO: Verify word
         # check word count, if increased then return true
-        #return verify_word()
-
-        # return false
+        return self.verify_word()
+        
     
+    def verify_word(self):
+        # hint?
+        try:
+            hint_button = WebDriverWait(self.driver, 0.2).until(expected_conditions.presence_of_element_located((By.CLASS_NAME, 'XmXXwG_lightbulb')))
+        except TimeoutException:
+            hint_button = WebDriverWait(self.driver, 0.2).until(expected_conditions.presence_of_element_located((By.CLASS_NAME, 'XmXXwG_bluebulb')))
+            hint_button.click()
+            return False
+        
+        print('need more hints')
+        return False
+
+
     def print_by_breadth(self, root, depth):
         nodes = [root]
         children = list()
@@ -286,3 +300,11 @@ class Explorer():
             nodes = children
             children = list()
             
+"""
+Note for later
+When hint is active, button class has dashed outline
+style="border: 3px dashed var(--hint-blue);"
+Maybe when hint button is available, use, and then go into a subroutine that only checks the hint area
+Must solve hint before using another, even if enough words found to get another
+style="color: white; background-color: black;"
+"""

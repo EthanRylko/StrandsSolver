@@ -1,16 +1,14 @@
 from tree import Node
-from typing import *
-from selenium.webdriver.remote.webelement import WebElement
+
 import nltk
 from nltk.corpus import words
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
-from selenium.webdriver.remote.webelement import WebElement
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import TimeoutException
-from time import sleep
+from typing import *
 
 
 start_button_class = 'Feo8La_playButton'
@@ -23,10 +21,9 @@ ROWS = 8
 COLS = 6
 
 class ButtonInfo():
-    def __init__(self, text, id):
+    def __init__(self, text: str, id: str):
         self.text = text
         self.id = id
-        self.visited = False
         self.hint = False
 
 
@@ -42,7 +39,7 @@ class Explorer():
 
     def run(self):
         self.start()
-        self.total_words = self.find_total_words()
+        self.found_words, self.total_words = self.find_total_words()
         self.load_board()
         self.print_board()
         self.solve()
@@ -82,13 +79,15 @@ class Explorer():
         bold_tags = paragraph.find_elements(By.TAG_NAME, 'b')
 
         if bold_tags:
-            total_words = int(bold_tags[-1].text)
-            print(f'There are {total_words} words in this puzzle.')
-            return total_words
+            print(bold_tags[0].text, bold_tags[1].text)
+            total_words = int(bold_tags[1].text)
+            found_words = int(bold_tags[0].text)
+            #print(f'There are {total_words} words in this puzzle.')
+            return found_words, total_words
 
         else:
             print('Bold Tags not found, how many words are there?')
-            return 0
+            return 0, 0
         
 
     def load_board(self):
@@ -130,8 +129,18 @@ class Explorer():
                     self.check_all_words(x, y, word_length)
                     self.load_board()
 
+                    if self.found_words == self.total_words:
+                        solved = True
+                        break
+                
+                if solved:
+                    break
+
             # all words of length word_length found, go up one
             word_length += 1
+        
+        print('Yippee!!')
+        while True: pass # infinite loop to stop the thing from closing
 
 
     def check_all_words(self, x: int, y: int, word_length: int):
@@ -148,7 +157,7 @@ class Explorer():
 
         # get surroundings (check if edge or already in other word)
         self.add_surroundings(root, x, y, 1, word_length)
-        print(f'finished {x}, {y} search for length {word_length}')
+        #print(f'finished {x}, {y} search for length {word_length}')
 
         # repeat until word_length reached
         # traverse tree, clicking on buttons
@@ -249,15 +258,17 @@ class Explorer():
             in_dictionary = word.lower() in self.word_set or word.lower() + 's' in self.word_set
 
             # hint mode, try any possible combination
-            if hint_mode:
+            if hint_mode and in_dictionary:
                 #print('traverse in hint_mode')
                 print(f'tried {word}')
-                self.click_on_path(path, hint_mode=True)
+                if self.click_on_path(path, hint_mode=True):
+                    print('Found!')
            
             # Found a real word
             elif word not in self.tried and in_dictionary:
                 print(f'tried {word}')
-                self.click_on_path(path)
+                if self.click_on_path(path):
+                    print('Found!')
                 self.tried.add(word)
 
         else:
@@ -267,22 +278,13 @@ class Explorer():
 
     def click_on_path(self, path, hint_mode = False):
         for item in path:
-            # get id
-            # need access to board div somehow...
-            #print(f'Button {item.text} with id {item.id}')
-
             button = self.board_div.find_element(By.ID, item.id)
-
-            # click
             button.click()
             self.load_board()
 
         # end of path, click again
         button.click()
 
-        # TODO: Verify word
-        # check word count, if increased then return true
-        #print(hint_mode)
         return self.verify_word(hint_mode)
         
     
@@ -297,12 +299,12 @@ class Explorer():
                 return False
 
             hint_button = WebDriverWait(self.driver, 0.2).until(expected_conditions.presence_of_element_located((By.CLASS_NAME, 'XmXXwG_bluebulb')))
+            if hint_button is None: return False # game end
+
             hint_button.click()
-            self.search_among_hints()
-            return True # ???
+            return self.search_among_hints()
         
         # no hint :(
-        print('need more hints')
         return False
     
 
@@ -325,6 +327,13 @@ class Explorer():
             self.traverse(root, word_length, list(), True)
             self.load_board()
 
+            # has a word been found?
+            temp = self.found_words
+            self.found_words, self.total_words = self.find_total_words()
+            if temp != self.found_words:
+                return True
+        
+        return False
 
 
     def print_by_breadth(self, root, depth):
@@ -341,14 +350,3 @@ class Explorer():
             print('')
             nodes = children
             children = list()
-            
-"""
-Note for later
-When hint is active, button class has dashed outline
-style="border: 3px dashed var(--hint-blue);"
-Maybe when hint button is available, use, and then go into a subroutine that only checks the hint area
-Must solve hint before using another, even if enough words found to get another
-style="color: white; background-color: black;"
-"""
-# TODO: Crashes out for some reason
-# To resolve, figure out if word is found. Then abort hint mode

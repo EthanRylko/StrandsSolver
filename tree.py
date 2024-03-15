@@ -33,12 +33,3 @@ class Node:
         self.children.append(node)
         return node
     
-
-    def set_visited(self, val: bool):
-        """
-        Mark node as visited
-
-        Args:
-            bool visited: New value
-        """
-        self.visited = val

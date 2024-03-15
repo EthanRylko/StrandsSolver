@@ -52,8 +52,6 @@ class Explorer():
         """
         Click through some buttons to get to the puzzle
         """
-        print('Hello World!')
-
         self.driver.get('https://www.nytimes.com/games/strands')
         start_button = WebDriverWait(self.driver, 10).until(expected_conditions.presence_of_element_located((By.CLASS_NAME, start_button_class)))
         start_button.click()
@@ -106,8 +104,9 @@ class Explorer():
                     button = self.board_div.find_element(By.ID, f'button-{counter}')
                     button_id = button.get_property('id')
                     button_info = ButtonInfo(button.text[0], button_id)
-                    if 'border: 3px dashed var(--hint-blue);' in button.get_attribute('style'):
-                        print(f'hint at {x}, {y}')
+                    style = button.get_attribute('style')
+                    if style and 'border: 3px dashed var(--hint-blue);' in style:
+                        #print(f'hint at {x}, {y}')
                         button_info.hint = True
 
                 except NoSuchElementException:
@@ -251,7 +250,7 @@ class Explorer():
 
             # hint mode, try any possible combination
             if hint_mode:
-                print('traverse in hint_mode')
+                #print('traverse in hint_mode')
                 print(f'tried {word}')
                 self.click_on_path(path, hint_mode=True)
            
@@ -283,12 +282,12 @@ class Explorer():
 
         # TODO: Verify word
         # check word count, if increased then return true
-        print(hint_mode)
+        #print(hint_mode)
         return self.verify_word(hint_mode)
         
     
     def verify_word(self, hint_mode = False):
-        print(f'verify word hint mode {hint_mode}')
+        #print(f'verify word hint mode {hint_mode}')
 
         # hint?
         try:
@@ -317,14 +316,13 @@ class Explorer():
                     hint_list.append((x, y))
         
         word_length = len(hint_list)
-        print(hint_list)
+        #print(hint_list)
         for coord in hint_list:
             x, y = coord
             root = Node(self.board[y][x])
-            print(x, y, root.data.text)
+            #print(x, y, root.data.text)
             self.add_surroundings(root, x, y, 1, word_length, True)
             self.traverse(root, word_length, list(), True)
-            sleep(0.1)
             self.load_board()
 
 
@@ -352,3 +350,5 @@ Maybe when hint button is available, use, and then go into a subroutine that onl
 Must solve hint before using another, even if enough words found to get another
 style="color: white; background-color: black;"
 """
+# TODO: Crashes out for some reason
+# To resolve, figure out if word is found. Then abort hint mode

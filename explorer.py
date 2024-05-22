@@ -12,7 +12,7 @@ from typing import *
 
 
 start_button_class = 'Feo8La_playButton'
-close_button_class = 'PwGt5a_closeX'
+close_button_class = 'ygtU9G_closeX'
 hint_div_class = 'XmXXwG_hint'
 board_class = 'UOpmtW_board'
 
@@ -53,7 +53,7 @@ class Explorer():
         start_button = WebDriverWait(self.driver, 10).until(expected_conditions.presence_of_element_located((By.CLASS_NAME, start_button_class)))
         start_button.click()
 
-        close_button = WebDriverWait(self.driver, 2).until(expected_conditions.presence_of_element_located((By.CLASS_NAME, close_button_class)))
+        close_button = WebDriverWait(self.driver, 5).until(expected_conditions.presence_of_element_located((By.CLASS_NAME, close_button_class)))
         close_button.click()
 
 
@@ -104,7 +104,7 @@ class Explorer():
                     button_id = button.get_property('id')
                     button_info = ButtonInfo(button.text[0], button_id)
                     style = button.get_attribute('style')
-                    if style and 'border: 3px dashed var(--hint-blue);' in style:
+                    if style and 'outline: 3px dashed var(--hint-blue);' in style:
                         #print(f'hint at {x}, {y}')
                         button_info.hint = True
 
@@ -258,7 +258,7 @@ class Explorer():
             in_dictionary = word.lower() in self.word_set or word.lower() + 's' in self.word_set
 
             # hint mode, try any possible combination
-            if hint_mode and in_dictionary:
+            if hint_mode:
                 #print('traverse in hint_mode')
                 print(f'tried {word}')
                 if self.click_on_path(path, hint_mode=True):

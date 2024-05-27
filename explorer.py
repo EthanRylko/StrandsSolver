@@ -8,7 +8,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import StaleElementReferenceException
 from time import sleep
+from datetime import datetime
 from typing import *
 
 
@@ -44,12 +46,15 @@ class Explorer():
         self.load_board()
         self.print_board()
         self.solve()
+        self.stop()
 
 
     def start(self):
         """
         Click through some buttons to get to the puzzle
         """
+        self.start_time = datetime.now()
+
         self.driver.get('https://www.nytimes.com/games/strands')
         start_button = WebDriverWait(self.driver, 10).until(expected_conditions.presence_of_element_located((By.CLASS_NAME, start_button_class)))
         start_button.click()
@@ -57,6 +62,15 @@ class Explorer():
         close_button = WebDriverWait(self.driver, 5).until(expected_conditions.presence_of_element_located((By.CLASS_NAME, close_button_class)))
         close_button.click()
 
+
+    def stop(self):
+        '''
+        
+        '''
+        total_time = datetime.now() - self.start_time
+        print(f'Solved in {total_time}')
+
+        while True: pass # infinite loop to stop the thing from closing
 
     def print_board(self):
         """
@@ -79,7 +93,7 @@ class Explorer():
         paragraph = self.hint_div.find_element(By.TAG_NAME, 'p')
         bold_tags = paragraph.find_elements(By.TAG_NAME, 'b')
 
-        if bold_tags and len(bold_tags) == 2:
+        if bold_tags and len(bold_tags) == 2 and bold_tags[1].text != '':
             print(bold_tags[0].text, bold_tags[1].text)
             total_words = int(bold_tags[1].text)
             found_words = int(bold_tags[0].text)
@@ -102,12 +116,20 @@ class Explorer():
             for x in range(COLS):
                 try:
                     button = self.board_div.find_element(By.ID, f'button-{counter}')
-                    button_id = button.get_property('id')
-                    button_info = ButtonInfo(button.text[0], button_id)
-                    style = button.get_attribute('style')
-                    if style and 'outline: 3px dashed var(--hint-blue);' in style:
-                        #print(f'hint at {x}, {y}')
-                        button_info.hint = True
+                    try:
+                        button_id = button.get_property('id')
+                        button_info = ButtonInfo(button.text[0], button_id)
+
+                        try:
+                            style = button.get_attribute('style')
+                            if style and 'outline: 3px dashed var(--hint-blue);' in style:
+                                #print(f'hint at {x}, {y}')
+                                button_info.hint = True
+                        except StaleElementReferenceException:
+                            pass
+
+                    except StaleElementReferenceException:
+                        button_info = None
 
                 except NoSuchElementException:
                     button_info = None
@@ -141,7 +163,6 @@ class Explorer():
             word_length += 1
         
         print('Yippee!!')
-        while True: pass # infinite loop to stop the thing from closing
 
 
     def check_all_words(self, x: int, y: int, word_length: int):
@@ -237,7 +258,7 @@ class Explorer():
         return self.not_in_lineage(node.parent, data)
 
 
-    def traverse(self, node: Node, word_length: int, path: List = list(), hint_mode: bool = False) -> bool:
+    def traverse(self, node: Node, word_length: int, path: List = list(), hint_mode: bool = False, word_mode: bool = False) -> bool:
         """
         Print paths of all traversals of tree, recursively
 
@@ -245,6 +266,7 @@ class Explorer():
             Node node: Node to start from
             str path: Path traveled as a string of characters
             bool hint_mode: True if searching through hint
+            bool word_mode: True if looking for real word
         
         Returns:
             bool: True if word found, else false
@@ -262,7 +284,7 @@ class Explorer():
             in_dictionary = word.lower() in self.word_set or word.lower() + 's' in self.word_set
 
             # hint mode, try any possible combination
-            if hint_mode:
+            if hint_mode and not word_mode:
                 #print('traverse in hint_mode')
                 print(f'tried {word}')
                 if self.click_on_path(path, hint_mode=True):
@@ -274,12 +296,12 @@ class Explorer():
                 print(f'tried {word}')
                 self.tried.add(word)
                 if self.click_on_path(path):
-                    print('Found!')
+                    #print('Found!')
                     return True
 
         else:
             for child in node.children:
-                if self.traverse(child, word_length - 1, path[:], hint_mode):
+                if self.traverse(child, word_length - 1, path[:], hint_mode, word_mode):
                     return True
         
         return False
@@ -288,8 +310,13 @@ class Explorer():
     def click_on_path(self, path, hint_mode = False):
         for item in path:
             button = self.board_div.find_element(By.ID, item.id)
-            button.click()
-            sleep(0.05)
+            try:
+                button.click()
+            except StaleElementReferenceException:
+                button = self.board_div.find_element(By.ID, item.id)
+                button.click()
+
+            #sleep(0.05)
             self.load_board()
 
         # end of path, click again
@@ -327,7 +354,18 @@ class Explorer():
                     hint_list.append((x, y))
         
         word_length = len(hint_list)
+        print('Word mode engaged')
         #print(hint_list)
+        for coord in hint_list:
+            x, y = coord
+            root = Node(self.board[y][x])
+            #print(x, y, root.data.text)
+            self.add_surroundings(root, x, y, 1, word_length, True)
+            if self.traverse(root, word_length, list(), True, True):
+                return True
+            self.load_board()
+
+        print('Word mode disengaged')
         for coord in hint_list:
             x, y = coord
             root = Node(self.board[y][x])

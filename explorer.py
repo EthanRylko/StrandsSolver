@@ -8,6 +8,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import TimeoutException
+from time import sleep
 from typing import *
 
 
@@ -78,7 +79,7 @@ class Explorer():
         paragraph = self.hint_div.find_element(By.TAG_NAME, 'p')
         bold_tags = paragraph.find_elements(By.TAG_NAME, 'b')
 
-        if bold_tags:
+        if bold_tags and len(bold_tags) == 2:
             print(bold_tags[0].text, bold_tags[1].text)
             total_words = int(bold_tags[1].text)
             found_words = int(bold_tags[0].text)
@@ -236,7 +237,7 @@ class Explorer():
         return self.not_in_lineage(node.parent, data)
 
 
-    def traverse(self, node: Node, word_length: int, path: List = list(), hint_mode: bool = False):
+    def traverse(self, node: Node, word_length: int, path: List = list(), hint_mode: bool = False) -> bool:
         """
         Print paths of all traversals of tree, recursively
 
@@ -244,9 +245,12 @@ class Explorer():
             Node node: Node to start from
             str path: Path traveled as a string of characters
             bool hint_mode: True if searching through hint
+        
+        Returns:
+            bool: True if word found, else false
         """
         if node is None:
-            return
+            return False
         
         path.append(node.data)
 
@@ -263,23 +267,29 @@ class Explorer():
                 print(f'tried {word}')
                 if self.click_on_path(path, hint_mode=True):
                     print('Found!')
+                    return True
            
             # Found a real word
             elif word not in self.tried and in_dictionary:
                 print(f'tried {word}')
+                self.tried.add(word)
                 if self.click_on_path(path):
                     print('Found!')
-                self.tried.add(word)
+                    return True
 
         else:
             for child in node.children:
-                self.traverse(child, word_length - 1, path[:], hint_mode)
+                if self.traverse(child, word_length - 1, path[:], hint_mode):
+                    return True
+        
+        return False
                 
 
     def click_on_path(self, path, hint_mode = False):
         for item in path:
             button = self.board_div.find_element(By.ID, item.id)
             button.click()
+            sleep(0.05)
             self.load_board()
 
         # end of path, click again
@@ -295,17 +305,16 @@ class Explorer():
         try:
             hint_button = WebDriverWait(self.driver, 0.2).until(expected_conditions.presence_of_element_located((By.CLASS_NAME, 'XmXXwG_lightbulb')))
         except TimeoutException:
-            if hint_mode:
-                return False
+            if not hint_mode:
+                hint_button = WebDriverWait(self.driver, 0.2).until(expected_conditions.presence_of_element_located((By.CLASS_NAME, 'XmXXwG_bluebulb')))
+                if hint_button is None: return False
 
-            hint_button = WebDriverWait(self.driver, 0.2).until(expected_conditions.presence_of_element_located((By.CLASS_NAME, 'XmXXwG_bluebulb')))
-            if hint_button is None: return False # game end
-
-            hint_button.click()
-            return self.search_among_hints()
+                hint_button.click()
+                return self.search_among_hints()
         
-        # no hint :(
-        return False
+        temp = self.found_words
+        self.found_words, self.total_words = self.find_total_words()
+        return temp != self.found_words
     
 
     def search_among_hints(self):
@@ -324,14 +333,9 @@ class Explorer():
             root = Node(self.board[y][x])
             #print(x, y, root.data.text)
             self.add_surroundings(root, x, y, 1, word_length, True)
-            self.traverse(root, word_length, list(), True)
-            self.load_board()
-
-            # has a word been found?
-            temp = self.found_words
-            self.found_words, self.total_words = self.find_total_words()
-            if temp != self.found_words:
+            if self.traverse(root, word_length, list(), True):
                 return True
+            self.load_board()
         
         return False
 
